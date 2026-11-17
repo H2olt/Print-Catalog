@@ -16,6 +16,9 @@
   "entry_limit": 0,
   "_entry_limit_comment": "Max models to process. Set to 0 for all. Use 20-50 for test runs, but do not publish a test run. IMPORTANT: Always close Orynt3D before exporting.",
 
+  "test_images": false,
+  "_test_images_comment": "true = full export, but every model shows a shared SAMPLE image (real image found) or MISSING IMAGE stand-in instead of its own thumbnail. Only two images are written. Use for checking the pipeline without a large upload.",
+
   "thumb_width":         400,
   "thumb_height":        400,
   "thumb_quality":       82,

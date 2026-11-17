@@ -87,6 +87,8 @@ def main():
     meta, models = catalog["meta"], catalog["models"]
     if meta.get("entry_limited"):
         print("WARN: this data came from a test export (entry_limit was set).")
+    if meta.get("test_images"):
+        print("WARN: test-image export — every thumbnail is a SAMPLE / MISSING stand-in.")
 
     if DIST.exists():
         shutil.rmtree(DIST)

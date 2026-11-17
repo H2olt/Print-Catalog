@@ -1,5 +1,6 @@
 # Machine-specific paths — stays on your PC
 config.json
+export-report.txt
 
 # Build output (Netlify regenerates it)
 dist/

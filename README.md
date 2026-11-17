@@ -38,16 +38,18 @@ dist/                                ← the live site (never committed)
 2. Copy `config.example.json` → `config.json` and fill in your paths.
 3. `pip install Pillow` (export only — the build needs nothing extra).
 
-## Test run before a full export
+## Test runs
 
-1. Set `entry_limit: 50` in `config.json`.
-2. Run `export.bat`, then `preview.bat`. Check thumbnails and filters.
-3. Set `entry_limit: 0` and run `export.bat` again. Thumbnails already made are skipped.
-4. Commit and push only the full export.
+Two ways to check things without a big upload:
+
+- **Test images** (`test_images: true`) — exports every model, but writes only two images. Models whose image was found and decodes correctly show a grey **SAMPLE** stand-in. Models with no image, or a broken one, show a red **MISSING IMAGE** stand-in. Safe to commit and push: it checks the whole pipeline end to end, Netlify included.
+- **Entry limit** (`entry_limit: 50`) — real thumbnails, but only the first N models. For checking thumbnail quality with `preview.bat`. Don't publish this one.
+
+Every export writes `export-report.txt` (not committed) listing each model without a usable image and why.
 
 ## Models without images
 
-Some models contain only mesh/slicer files (no .jpg/.png). They show a ⚙ placeholder in the catalog. This is expected.
+Some models contain only mesh/slicer files (no .jpg/.png). In a normal export they show a ⚙ placeholder; in a test-image export they show the red MISSING IMAGE stand-in. Either way they're listed in `export-report.txt`.
 
 ## Send button (not yet configured)
 

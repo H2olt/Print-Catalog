@@ -21,7 +21,7 @@ import sys
 from pathlib import Path, PurePosixPath
 
 try:
-    from PIL import Image
+    from PIL import Image, ImageDraw, ImageFont
 except ImportError:
     print("ERROR: Pillow is required.  Run: pip install Pillow")
     sys.exit(1)
@@ -37,6 +37,12 @@ REQUIRED_KEYS = [
     "thumbnail_cache_dir",
 ]
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
+
+# Test-image mode: every model points at one of these two shared files
+# instead of its own thumbnail. The leading underscore keeps them from
+# colliding with model-id filenames.
+SAMPLE_THUMB  = "_sample.webp"
+MISSING_THUMB = "_missing.webp"
 
 
 def load_config() -> dict:
@@ -213,6 +219,34 @@ def process_thumbnail(src: Path, dest: Path, size: tuple, quality: int, method: 
         img.save(dest, "WEBP", quality=quality, method=method)
 
 
+def image_ok(src: Path) -> str | None:
+    """Fully decode an image without saving it. Returns an error string, or None if it's usable."""
+    try:
+        with Image.open(src) as img:
+            img.load()
+        return None
+    except Exception as e:
+        return str(e)
+
+
+def make_stand_in(dest: Path, size: tuple, label: str, bg: tuple, fg: tuple):
+    """Draw a flat stand-in image with a centred label."""
+    tw, th = size
+    img  = Image.new("RGB", (tw, th), bg)
+    draw = ImageDraw.Draw(img)
+    try:
+        font = ImageFont.load_default(size=max(14, tw // 12))
+    except TypeError:  # Pillow < 10.1
+        font = ImageFont.load_default()
+    draw.rectangle([4, 4, tw - 5, th - 5], outline=fg, width=4)
+    box = draw.multiline_textbbox((0, 0), label, font=font, align="center")
+    x = (tw - (box[2] - box[0])) // 2
+    y = (th - (box[3] - box[1])) // 2
+    draw.multiline_text((x, y), label, fill=fg, font=font, align="center")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    img.save(dest, "WEBP", quality=80)
+
+
 # ── Path-derived publisher / bundle fallback ───────────────────────────────────
 
 def path_field_at_depth(source_path: str, depth: int) -> str:
@@ -284,6 +318,7 @@ def export(cfg: dict):
     thumb_method   = int(cfg.get("thumb_encode_method", 4))
     exclude_colls  = set(cfg.get("exclude_collections", ["NoExport"]))
     demo_pubs      = set(cfg.get("demo_publishers", []))
+    test_images    = bool(cfg.get("test_images", False))
 
     # Folder depth for path-derived publisher/bundle fallback (1-based).
     # e.g. if your structure is Root/Category/Publisher/Bundle/Model,
@@ -309,6 +344,9 @@ def export(cfg: dict):
         print(f"  [TEST MODE] entry_limit={entry_limit}  (set to 0 to process all)\n")
     if demo_pubs:
         print(f"  [DEMO MODE] Restricting to publishers: {sorted(demo_pubs)}\n")
+    if test_images:
+        print("  [TEST IMAGES] Found images → SAMPLE stand-in, missing → MISSING stand-in.")
+        print("                No real thumbnails are written. Set test_images: false for real ones.\n")
 
     # ── Collections ────────────────────────────────────────────────────────────
     print("Loading collections...")
@@ -328,9 +366,21 @@ def export(cfg: dict):
         print(f"  Limiting to first {len(raw_models)}.")
 
     # ── Overwrite check ────────────────────────────────────────────────────────
-    existing_thumbs = list(thumbs_dir.glob("*.webp"))
+    existing_thumbs = [f for f in thumbs_dir.glob("*.webp")
+                       if f.name not in (SAMPLE_THUMB, MISSING_THUMB)]
     overwrite = False
-    if existing_thumbs:
+    if test_images:
+        if existing_thumbs and not entry_limit and not demo_pubs:
+            print(f"\n  {len(existing_thumbs)} real thumbnail(s) exist. A test-image export removes")
+            print("  them so only the two stand-ins get published.")
+            if not prompt_overwrite(len(existing_thumbs)):
+                print("\n  Exiting. No files were written.")
+                sys.exit(0)
+        make_stand_in(thumbs_dir / SAMPLE_THUMB, thumb_size, "SAMPLE\nimage found",
+                      (40, 44, 52), (150, 160, 175))
+        make_stand_in(thumbs_dir / MISSING_THUMB, thumb_size, "MISSING\nIMAGE",
+                      (90, 10, 10), (255, 80, 60))
+    elif existing_thumbs:
         overwrite = prompt_overwrite(len(existing_thumbs))
         if overwrite:
             print(f"  Deleting {len(existing_thumbs)} existing thumbnails...")
@@ -341,6 +391,7 @@ def export(cfg: dict):
     print(f"\nProcessing (thumb={thumb_size}, quality={thumb_quality}, method={thumb_method})...")
     models_out: list[dict] = []
     errors: list[str]      = []
+    no_image: list[str]    = []
     processed = skipped = missing = excluded = demo_excluded = 0
     all_extra_keys: set[str] = set()
 
@@ -393,7 +444,20 @@ def export(cfg: dict):
         if img_src is None:
             img_src = resolve_contents_image(library_root, contents)
 
-        if img_src:
+        if test_images:
+            # Decode the real image (so corrupt files count as missing) but
+            # point every model at a shared stand-in instead of its own thumb.
+            err = image_ok(img_src) if img_src else "no image found"
+            if err is None:
+                thumb_rel = f"thumbs/{SAMPLE_THUMB}"
+                processed += 1
+            else:
+                thumb_rel = f"thumbs/{MISSING_THUMB}"
+                missing += 1
+                if img_src:
+                    errors.append(f"{name}: {err}")
+                no_image.append(f"{name}\t{src_path}\t{err}")
+        elif img_src:
             fname      = f"{model_id}.webp"
             thumb_dest = thumbs_dir / fname
             if thumb_dest.exists() and not overwrite:
@@ -404,12 +468,14 @@ def export(cfg: dict):
                     processed += 1
                 except Exception as e:
                     errors.append(f"{name}: {e}")
+                    no_image.append(f"{name}\t{src_path}\t{e}")
                     missing += 1
                     fname = None
             if fname:
                 thumb_rel = f"thumbs/{fname}"
         else:
             missing += 1
+            no_image.append(f"{name}\t{src_path}\tno image found")
 
         # scales/themes/types promoted to top-level for viewer compatibility.
         # They remain in extras too if those keys exist in Orynt3D attributes.
@@ -437,9 +503,13 @@ def export(cfg: dict):
         print(f"  Demo filtered out   : {demo_excluded}")
     if excluded:
         print(f"  NoExport excluded   : {excluded}")
-    print(f"  Thumbs processed    : {processed}")
-    print(f"  Thumbs skipped      : {skipped} (already existed)")
-    print(f"  Thumbs missing      : {missing} (no image found)")
+    if test_images:
+        print(f"  Image found (SAMPLE): {processed}")
+        print(f"  MISSING IMAGE       : {missing}")
+    else:
+        print(f"  Thumbs processed    : {processed}")
+        print(f"  Thumbs skipped      : {skipped} (already existed)")
+        print(f"  Thumbs missing      : {missing} (no image found)")
     if errors:
         print(f"  Errors ({len(errors)}):")
         for e in errors[:20]: print(f"    {e}")
@@ -464,6 +534,7 @@ def export(cfg: dict):
         "total":         len(models_out),
         "entry_limited": bool(entry_limit),
         "demo_mode":     bool(demo_pubs),
+        "test_images":   test_images,
         "send_url":      cfg.get("send_url") or None,
         "publishers":    sorted({m["publisher"] for m in models_out if m["publisher"]}),
         "bundle_map":    bundle_map,
@@ -488,6 +559,15 @@ def export(cfg: dict):
         if orphans:
             print(f"  Pruned {len(orphans)} orphaned thumbnail(s).")
 
+    # ── Missing-image report ───────────────────────────────────────────────────
+    report = SCRIPT_DIR / "export-report.txt"
+    with open(report, "w", encoding="utf-8") as f:
+        f.write(f"Models without a usable image: {len(no_image)}\n")
+        f.write("name\tpath\treason\n")
+        f.write("\n".join(sorted(no_image)) + "\n")
+    if no_image:
+        print(f"  Missing-image list  → {report}")
+
     # ── catalog.json ───────────────────────────────────────────────────────────
     # One model per line so git diffs show exactly which models changed.
     catalog = output_dir / "catalog.json"
@@ -508,6 +588,8 @@ def export(cfg: dict):
         print(f"  [TEST MODE] Set entry_limit to 0 for a full export. Don't publish this one.")
     if demo_pubs:
         print(f"  [DEMO MODE] Remove demo_publishers from config for full catalog.")
+    if test_images:
+        print(f"  [TEST IMAGES] Stand-in images only. Set test_images: false for real thumbnails.")
 
 
 if __name__ == "__main__":
