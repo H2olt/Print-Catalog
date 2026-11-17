@@ -38,6 +38,37 @@ dist/                                ← the live site (never committed)
 2. Copy `config.example.json` → `config.json` and fill in your paths.
 3. `pip install Pillow` (export only — the build needs nothing extra).
 
+## Test run before a full export
+
+1. Set `entry_limit: 50` in `config.json`.
+2. Run `export.bat`, then `preview.bat`. Check thumbnails and filters.
+3. Set `entry_limit: 0` and run `export.bat` again. Thumbnails already made are skipped.
+4. Commit and push only the full export.
+
+## Models without images
+
+Some models contain only mesh/slicer files (no .jpg/.png). They show a ⚙ placeholder in the catalog. This is expected.
+
+## Send button (not yet configured)
+
+The request panel has a **✉ Send** button, disabled until `send_url` in `config.json` points at an endpoint that accepts a JSON POST and returns HTTP 200. Options:
+
+- **Google Apps Script** web app — free, writes to a Sheet you own
+- **Cloudflare Worker** — free tier, can email you or write to KV
+- **Netlify Function** — lives in this repo, deploys with the site
+
+Payload:
+
+```json
+{
+  "exported": "2026-03-19T...",
+  "note": "user's note text",
+  "models": [
+    { "id": "uuid", "name": "...", "publisher": "...", "bundle": "...", "path": "...", "scales": ["32mm"] }
+  ]
+}
+```
+
 ## Licensing note
 
 Each model's publisher sets its own commercial terms. This catalog is a personal index and must not be used to sell prints of models you aren't licensed to sell. `export.py` asks you to confirm this on every run.
