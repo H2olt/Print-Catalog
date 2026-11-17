@@ -1,0 +1,5 @@
+# Netlify builds the site from this repo on every push.
+# build.py uses only the Python standard library — no install step needed.
+[build]
+  command = "python3 build.py"
+  publish = "dist"

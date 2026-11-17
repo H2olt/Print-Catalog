@@ -1,0 +1,19 @@
+# Machine-specific paths — stays on your PC
+config.json
+
+# Build output (Netlify regenerates it)
+dist/
+
+# Old pre-repo output folder and archive, if copied in
+orynt3d-catalog/
+*.zip
+
+# Never commit the Orynt3D database
+*.db
+*.cache
+
+__pycache__/
+.venv/
+venv/
+.DS_Store
+Thumbs.db

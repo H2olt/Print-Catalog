@@ -1,0 +1,36 @@
+{
+  "_comment": "Copy this file to theme.json to customize the catalog's appearance. The build script injects these values into index.html at build time.",
+
+  "colors": {
+    "_comment": "Use any valid CSS color: hex (#ff0000), rgb(255,0,0), or named colors (red).",
+    "background":        "#0d0c0b",
+    "background_card":   "#1c1916",
+    "background_panel":  "#181512",
+    "border":            "#2e2820",
+    "border_light":      "#3d352a",
+    "accent":            "#c8832a",
+    "accent_bright":     "#e09540",
+    "accent_dim":        "#7a4e18",
+    "text_primary":      "#e8dcc8",
+    "text_secondary":    "#9a8878",
+    "text_muted":        "#5a4e42",
+    "tag_background":    "#201c17",
+    "tag_border":        "#3a3028"
+  },
+
+  "fonts": {
+    "_comment": "Any Google Fonts family name works. display_font is used for titles and headings. body_font is used for general text. mono_font is used for labels and metadata.",
+    "display_font": "Cinzel",
+    "body_font":    "Barlow",
+    "mono_font":    "Share Tech Mono",
+    "_font_import": "https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Share+Tech+Mono&family=Barlow:wght@300;400;500;600&display=swap"
+  },
+
+  "layout": {
+    "card_min_width_px":  180,
+    "card_max_width_px":  320,
+    "grid_gap_px":         12,
+    "sidebar_width_px":   240,
+    "thumb_radius_px":      0
+  }
+}

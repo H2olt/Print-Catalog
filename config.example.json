@@ -1,0 +1,33 @@
+{
+  "_comment": "Copy this file to config.json (which git ignores) and fill in your paths. Used only by export.py on your PC.",
+
+  "models_db":           "C:\\Users\\YourName\\AppData\\Roaming\\orynt3d\\User Storage\\stlm-models.cache",
+  "collections_db":      "C:\\Users\\YourName\\AppData\\Roaming\\orynt3d\\User Storage\\stlm-collections.db",
+  "thumbnail_cache_dir": "C:\\Users\\YourName\\AppData\\Roaming\\orynt3d\\User Storage\\Covers\\orynt3dCovers",
+  "library_root":        "F:\\3DPRINT",
+
+  "catalog_title":    "Holt's",
+  "catalog_subtitle": "3D PRINT CATALOG",
+
+  "_depth_comment": "Folder depth (1-based) used to infer publisher and bundle from your library path when those attributes are not set in Orynt3D. Count from the library root: root=1, next folder=2, etc. Set to 0 to disable path-derived fallback for that field.",
+  "publisher_folder_depth": 2,
+  "bundle_folder_depth":    3,
+
+  "entry_limit": 0,
+  "_entry_limit_comment": "Max models to process. Set to 0 for all. Use 20-50 for test runs, but do not publish a test run. IMPORTANT: Always close Orynt3D before exporting.",
+
+  "thumb_width":         400,
+  "thumb_height":        400,
+  "thumb_quality":       82,
+  "thumb_encode_method": 4,
+  "_thumb_comment": "WebP thumbnails. RGBA preserved. Quality 80-85 recommended. thumb_encode_method: 0=fastest, 6=best compression.",
+
+  "exclude_collections": ["NoExport"],
+  "_exclude_comment": "Models belonging to any of these Orynt3D collection names are skipped entirely.",
+
+  "demo_publishers": [],
+  "_demo_comment": "When non-empty, only models from these publisher names are included. Empty list = include all.",
+
+  "send_url": "",
+  "_send_url_comment": "Optional. POST endpoint for the Send button in the viewer. Leave empty to disable."
+}
